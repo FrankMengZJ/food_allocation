@@ -1,11 +1,11 @@
 ---
-title: "Analysis of TTC Subway Delays in 2023: Uncovering Trends and Insights"
+title: "Choice System Benefits to Food Bank Allocation"
 author: 
-  - Zijun Meng
-thanks: "Code and data are available at: https://github.com/FrankMengZJ/TTC-Subway-Delay"
+  - Qin He, Shuyuan Zheng, Zijun Meng
+thanks: "Code and data are available at: https://github.com/FrankMengZJ/food_allocation Replication is available at https://doi.org/10.48152/ssrp-e3cd-1v45"
 date: today
 date-format: long
-abstract: "Subway plays an important role in many Toronto citizens' life, each delay may disturb them a lot. By analyzing the data of TTC subway delays, I found that most delays are because of customers' misbehavior or vehicles' problems. This may help TTC find why their subways delay a lot and consequently improve their service. It can also contribute to the safety of passengers."
+abstract: "This paper investigates the operational efficiency and pricing strategies of food banks in Canada and the USA, focusing on the \"Choice system\" implemented by Feeding America. The study reveals that Canadian food banks are more efficient in distributing food per share compared to their US counterparts. It also highlights a stratified pricing system where essential items like cereals and diapers have higher relative prices due to their demand or supply. These findings suggest an adaptive market mechanism within the \"Choice system\" that caters to the nuanced needs of food bank clients."
 format: pdf
 number-sections: true
 bibliography: references.bib
@@ -20,101 +20,209 @@ library(tidyverse)
 library(here)
 library(kableExtra)
 library(ggplot2)
-# Acquiring the cleaned delay data
-delay_data <- read_csv(file=here("outputs/data/analysis_data.csv"))
+# Acquiring the cleaned data
+df <- read.csv(file=here('outputs/data/bidding.csv'))
 ```
 
+# Introduction  {#sec-intro}
 
-# Introduction
+Feeding America is an organization that distributes food at over 200 food banks across the United States [@Prendergast_2022]. In the early 2000s, the organization used a queuing mechanism to distribute approximately 200 million pounds of food donated by distributors, retailers, and manufacturers, and in 2004, a group including original author Canice Prendergast replaced it with a market-based mechanism called a "choice system". ". This system introduced a special currency - shares - that food banks use to bid on truckloads of food.
 
-The subway system, as a part of the Toronto Transit Commission (TTC) service, plays an important role in the daily lives of commuters in Toronto . According to @ttctransitplanning, on average, the number of customer boardings on weekdays in 2022 is 746,200, its efficient functioning may benefit hundreds of thousands of people's life and contribute to the economy of the city. Subway delays can lead to substantial economic costs in terms of lost productivity and time, while also impacting the daily well-being and reliability experienced by thousands of commuters. Given its critical importance, understanding why subway delays is essential to improve the system. 
+In the original distribution algorithm, each food bank distributed food (in pounds) equally according to the number of clients it needed, which was problematic in a number of ways. First, different food banks have different needs; second, food is distributed randomly based on geographic location, leading to high transportation costs; and finally, the distribution system is inefficient and discourages donations. The Choice system solves these problems by allocating shares equally to each client and then using these shares to bid in a first price sealed bid auction that takes place twice a day. Shares can be saved and borrowed, and any shares spent during the day go back to the food bank that night. This mechanism allows the food bank to match its purchases to its long-term and short-term needs and to the geographic location of the donor.
 
-To analyze the data uploaded by @subwaydelaydata, I worked on R [@citeR], using the tidyverse [@tidyverse], opendatatoronto [@opendatatoronto], and gitcreds [@gitcreds] packages. Tables in the report were created with kableExtra [@kableExtra] and figures were created with ggplot2 which was built in tidyverse [@tidyverse]. This paper first presents an analysis of the patterns of subway delays, followed by an exploration of the most frequent causes. We then discuss the implications of these findings for TTC operations and passenger safety. By studying on the causes, we learned that there are several factors not only make the subway late but also threats the safety of passengers, it is necessary for TTC to take actions.
+While the Choice system allowed for more flexible food distribution, many practitioners were initially skeptical of the market-based system, primarily fearing that smaller or less savvy food banks would suffer. A number of safeguards were implemented to ensure fairness for all food banks, including access to credit and the ability to bid jointly with other food banks.
 
+By reproducing the data from the original author, Canice Prendergast, we wanted to focus on the characteristics of the shares of certain products and analyze them to try to explain the appearance of outliers for certain products and the possible reasons through these data. 
 
+At the same time, we introduced the variables of region, we split these data into two regions, one in Canada and one in the United States to explore possible regional differences.To analyze the data, I worked on R [@citeR], using the tidyverse [@tidyverse], forcats [@forcats], and gitcreds [@gitcreds] packages. Tables in the report were created with kableExtra [@kableExtra] and figures were created with ggplot2 which was built in tidyverse [@tidyverse].
 
 
 # Data {#sec-data}
+Data Set Description
 
-The TTC Subway Delay Data @subwaydelaydata records the information of each delay they faced including time, location and reason which can be used to analyze and consequently find some insights to reduce the problems. 
-@tbl-data-sample shows a sample of the cleaned data set. Variables "Date", "Time" and "Day" state when the delay happens, variable "Station" shows where the delay heppens, variable "Code" indicates what caused the delay, variable "Min_Delay" records how many minutes the subway delayed, for example, 'MUPAA' stands for Passenger Assistance Alarm Activations, and finally "Line" shows which subway line delayed, "YU" represents Line 1, BD stands for Line 2. Although @subwaydelaydata  provided the data from 2018 to 2023, the reason why I only work on the 2023 is the subway service was significantly influenced by COVID-19 from 2020 to 2022, while prepandemic data was too old, the problems may be different from what we have now. In this case, I will only focus on the post pandemic era, 2023. 
+This dataset is derived from Feeding America and covers auction data from 2000 to 2004 (prior to the implementation of the Choice System) as well as from July 1, 2005 onward    [@Prendergast_2022]. The data for this timeframe details the total amount of food received by each food bank, the individual food loads won at auction, whether credit was used to purchase, and the location of the food. The analysis of 75,183 auctions culminated in a study typically using data from 54,058 auctions, which were carefully screened to exclude auctions and food banks that did not fit due to merging and coding issues.
+
+
+Main variables 
+
+The first variables we focused on were food types and prices. This dataset collects the types of food obtained through auctions and their prices, revealing significant differences between food types, such that a share can purchase an average of 4 pounds of food, but in one-quarter of auctions, a share can obtain more than 100 pounds of food.
+
+We then focus on the food bank's targeting factor. This variable captures the number of poor clients in the area where the food bank is located. Analysis shows that small food banks purchase 72% more food under the Choice System than large food banks [@Prendergast_2022].
+
+The next variable we focused on was nutritional value. In the original article, the nutritional value of food parcels purchased by small and large food banks was analyzed using the Weight Watchers point system, which showed that the nutritional value of food acquired by small food banks was only 1.8% lower than that of large food banks, despite acquiring 72% more food.
+
+The final variable we focused on was geographic location and transportation costs. The dataset calculates the average distance from the warehouse to the food bank that won the auction through ArcGIS software, as well as the transportation cost savings through the Choice System. Food banks traveled an average of 1,030 kilometers one way to collect food, saving approximately $15.7 million in annual transportation costs compared to the 1,720 kilometers estimated by the old algorithm.
+
+Several variables in the data set also serve as labels to help us categorize this data; these include temporal information (e.g., year and month), unique identifiers of the auctions, and the codes of the countries that participated in the auctions (focusing on the United States and Canada).
 
 ```{r}
 #| label: tbl-data-sample
-#| tbl-cap: "The first five rows from the cleaned TTC metro delay data"
+#| tbl-cap: "The first five rows from the selected data"
 #| echo: false
 #| warning: false
 #| render: asis
 #| 
-delay_data |>
+df |>
+  select(type,monthyear,totalShares,totalPounds, choicemember) |>
   mutate_if(is.numeric, round, digits = 2)|>
   head(5) |>
   kable()
 ```
 
-Firstly, I analyzed the number of delays by line. As @fig-delay-by-line shows, majority of delays happened in YU (Line 1) and BD (Line 2), as they are the busiest subway lines in Toronto, this is not surprising. 
+# Results  {#sec-results}
+
+These graphs are meant to help us understand how much food banks are usually willing to pay when they auction off food. Imagine that food banks are like shopping at the grocery store, but they are bidding on the food. Sometimes they may pay a lot of money, while other times they may pay very little, or even a negative amount (which means they are actually being paid to take the food). However, this is not very common.
+
+
+This bar chart @fig-replication-f2 discusses how shares regulate choices through market mechanisms in a food bank auction system. Figure 1 shows the distribution of prices per pound of food generated through winning bids. Typically, the results would be described in terms of pounds of food that can be purchased per share, but since some of the transaction prices were negative, a range of shares per pound of food was tallied here. The average price was 0.28 shares, but in 25% of the auctions, purchasers paid less than 0.01 shares per pound. At the higher end of the price spectrum, 3% of shipments resulted in a cost of 1.5 shares per pound or more. Negative shares occurred in 7.8 percent of auctions.
+
+This price variation is largely caused by food type, and in @fig-replication-f3, the price of the most popular food, cereal, is normalized to 1. Prices show dramatic variation. Compared to a pound of cereal, a food bank could get 2 pounds of meat, 5 pounds of dairy, 40 pounds of beverages, or 80 pounds of produce.
+
+From the @fig-replication-f3, we can see a clear stratification of food values. certain items like cereals, diapers, and pasta have higher relative prices, indicating they are more valued or scarce. Certain items like cereals, diapers, and pasta have higher relative prices, indicating they are more valued or scarce resources within the network of food banks. The higher price can be indicative of higher demand or lower supply for these items compared to others. It could also reflect the higher nutritional value or utility these items provide to the clients of the food banks.
+
+Conversely, items such as produce, drinks, and baby food appear to have much lower relative prices. This could be indicative of higher abundance or lower demand for these items, either because they are perishable or because of differences in demand among some of the clients of the food banks. Differences in demand.
+
 
 ```{r}
-#| label: fig-delay-by-line
-#| fig-cap: "Delay by line"
+#| label: fig-replication-f2
+#| fig-cap: "Replication of Figure 2"
 #| echo: false
 #| warning: false
 #| render: asis
 #| 
-delaybyline <-
-  delay_data |>
-  group_by(Line) %>%
-  summarise(Mean_Delay = mean(Min_Delay),DelayCases = n()) |>
-  filter(DelayCases > 100) |>
-  arrange(-DelayCases)
-ggplot(data=delaybyline, aes(x=Line, y=DelayCases)) +
-  geom_bar(stat="identity")
+library(ggplot2)
+library(dplyr)
+
+
+dff2 <- df %>%
+  mutate(unitprice = pmin(pmax(pricePerPound, -0.2), 1.5)) # Clamp unit price within [-0.2, 1.5]
+
+
+ggplot(dff2, aes(x = unitprice)) +
+  geom_histogram(binwidth = 0.05, fill = 'grey', color = 'black', size = 0.35, alpha = 0.75) +
+  scale_x_continuous(breaks = c(0, 0.5, 1, 1.5), labels = c("0", "0.5", "1.0", "1.5+"), limits = c(-0.2, 1.5)) +
+  labs(x = 'Shares per pound', y = 'Frequency', title = 'Distribution of Price per Pound') +
+  theme_minimal()
+
 ```
 
-There are 161 kinds of cases that caused the delay in 2023, among them, the top 16 kinds of incidents led to 6015 out of 8234 of all the delays, as they are the most important ones. @tbl-delay-by-reason showed the number of cases happened and the mean of  how long they delayed. 
-
 ```{r}
-#| label: tbl-delay-by-reason
-#| tbl-cap: "Delay by reason"
+#| label: fig-replication-f3
+#| fig-cap: "Replication of Figure 3"
 #| echo: false
 #| warning: false
 #| render: asis
-cleaned_data <- read_csv(file=here("outputs/data/analysis_data.csv"))
-cleaned_data$Code[cleaned_data$Code == 'SUDP'] <- 'Disorderly Patron'
-cleaned_data$Code[cleaned_data$Code == 'MUPAA'] <- 'Passenger Assistance Alarm Activated - No Trouble Found'
-cleaned_data$Code[cleaned_data$Code == 'PUOPO'] <- 'OPTO (COMMS) Train Door Monitoring'
-cleaned_data$Code[cleaned_data$Code == 'SUO'] <- 'Passenger Other'
-cleaned_data$Code[cleaned_data$Code == 'MUIR'] <- 'Injured or ill Customer (On Train) - Medical Aid Refused'
-cleaned_data$Code[cleaned_data$Code == 'SUUT'] <- 'Unauthorized at Track Level'
-cleaned_data$Code[cleaned_data$Code == 'MUSAN'] <- 'Unsanitary Vehicle'
-cleaned_data$Code[cleaned_data$Code == 'MUI'] <- 'Injured or ill Customer (On Train) - Transported'
-cleaned_data$Code[cleaned_data$Code == 'MUATC'] <- 'ATC Project'
-cleaned_data$Code[cleaned_data$Code == 'TUO'] <- 'Transportation Department - Other'
-cleaned_data$Code[cleaned_data$Code == 'EUDO'] <- 'Door Problems - Faulty Equipment'
-cleaned_data$Code[cleaned_data$Code == 'MUO'] <- 'Miscellaneous Other'
-cleaned_data$Code[cleaned_data$Code == 'SUAP'] <- 'Assault / Patron Involved'
-cleaned_data$Code[cleaned_data$Code == 'SUEAS'] <- 'Emergency Alarm Station Activation'
-cleaned_data$Code[cleaned_data$Code == 'MUDD'] <- 'Door Problems - Debris Related'
-cleaned_data$Code[cleaned_data$Code == 'MUTO'] <- 'Misc. Transportation Other - Employee Non-Chargeable'
+
+library(ggplot2)
+library(dplyr)
+library(forcats)
+
+dff3 <- df %>%
+  mutate(
+    monthyear = factor(monthyear, levels = unique(monthyear)),
+    type = factor(type, levels = c('Cereal', unique(type[type != 'Cereal']))), 
+    price = pricePerPound * totalPounds,
+    resprice = residuals(lm(pricePerPound ~ monthyear, data = .))
+  )
+
+model_res <- lm(resprice ~ type, data = dff3)
+predicted_prices <- data.frame(type = levels(dff3$type)) %>%
+  cbind(predict(model_res, newdata = ., interval = 'confidence'))
+
+mean_price <- mean(dff3$pricePerPound, na.rm = TRUE)
+predicted_prices <- within(predicted_prices, {
+  fit <- fit + mean_price
+  lwr <- lwr + mean_price
+  upr <- upr + mean_price
+  fit <- fit / fit[1] 
+  lwr <- lwr / lwr[1]
+  upr <- upr / upr[1]
+})
+
+predicted_prices$type <- fct_reorder(predicted_prices$type, predicted_prices$fit)
+
+ggplot(predicted_prices, aes(x = type, y = fit)) +
+  geom_col() +
+  coord_flip() +
+  labs(x = "Food Type", y = "Normalized Estimated Price/Pound", title = "Estimated Price Per Pound by Food Type") +
+  theme_minimal()
 
 
-cleaned_data %>%
-  group_by(Code) %>% 
-  summarise(Mean_Delay = mean(Min_Delay),n = n()) %>%
-  arrange(-n) %>%
-  mutate_if(is.numeric, round, digits = 2)|>
-  filter(n>100)%>%
-  kable()
 ```
-@tbl-delay-by-reason showed that Disorderly Patrons causes the most delays, while Unauthorized at Track Level, which causes the longest delays among the most frequent caues in average, and Assault / Patron Involved are important factors as well. These kinds of delays usually come from people's misbehavior, and potentially may harm other customers as well as themselves. For the subways' efficiency and customers' safety, I suggest TTC focus more on the order in stations, maybe considering hiring more staff to decrease the number of such incidents. 
 
-Passengers mistriggering alarms is also a problem worth considering, apart from making the trains late, they may make other customers panic and may cause harm to them, TTC can consider improve how users use the alarm. What's more, the problems of trains themselves are also critical, there are more than 300 delays caused by door problems, which is possible to hurt the passengers, TTC is responsible for keeping the vehicles safe to use, maybe they need more overhauls.
+Additionally, customers of food banks are mainly in the following categories: for example, families in need with sudden changes and minors to support, who may not be able to provide for themselves for a while due to sudden illness, unemployment, or other unfortunate events.
 
-In conclusion, this study highlights key areas for TTC improvement, particularly in managing passengers' behavior and vehicle maintenance. Future research might explore the effectiveness of specific interventions in reducing these delays.
+Or the underprivileged, and disabled people covered by the government's security system: these people may be in long-term hardship due to their physical condition, age, or other reasons. Specifically, for those who are temporarily unable to be self-sufficient, items that can quickly satisfy life's needs are going to be popular, such as cereals, or some high-calorie fast food. For those families who have minors to support, or for the elderly who are unable to care for themselves, immediate necessities are important such as diapers. These populations have more fixed needs, and for them, the difference in the value of these low-share aids compared to the value of high-share aids is large, which can lead to excessive pressure on food banks to warehouse these low-shares, which further affects low-share prices.
+
+```{r}
+#| label: fig-ca-vs-us
+#| fig-cap: "Operational Efficiency: USA vs Canada"
+#| echo: false
+#| warning: false
+#| render: asis
+#| 
+library(ggplot2)
+library(dplyr)
+
+
+df_filtered <- df %>% 
+  filter(COUNTRYCODE %in% c("USA", "CANADA")) 
+
+efficiency_by_country <- df_filtered %>%
+  group_by(COUNTRYCODE) %>%
+  summarise(AveragePoundsPerShare = mean(poundsPerShare, na.rm = TRUE))
+
+ggplot(efficiency_by_country, aes(x = COUNTRYCODE, y = AveragePoundsPerShare, fill = COUNTRYCODE)) +
+  geom_bar(stat = "identity") +
+  labs(x = "Country", y = "Average Pounds Per Share") +
+  theme_minimal()
+
+```
+The operational efficiency, in terms of average pounds per share, is significantly higher for Canada than for the USA. @fig-ca-vs-us suggests that, on average pounds per share, Canadian food banks are distributing over twice the pounds of food compared to their US counterparts.
+
+The reasons behind the difference in operational efficiency could be multifaceted. Factors such as logistical support, resource allocation, the number and size of food banks, the volunteer workforce, and the socio-economic contexts within which these food banks operate could all influence the operational efficiency.
+
+
+```{r}
+#| label: fig-ca-vs-us-2
+#| fig-cap: "Distribution of Price per Pound: US vs. CAN"
+#| echo: false
+#| warning: false
+#| render: asis
+#| 
+
+dfcvu <- df %>%
+  mutate(unitprice = pmin(pmax(pricePerPound, -0.2), 1.5), 
+         COUNTRYCODE = factor(COUNTRYCODE))
+
+
+ggplot(dfcvu, aes(x = unitprice, fill = COUNTRYCODE)) +
+  geom_histogram(binwidth = 0.05, color = 'black', size = 0.35, alpha = 0.75, position = "dodge") +
+  scale_fill_manual(values = c("CANADA" = "blue", "USA" = "red")) +
+  scale_x_continuous(breaks = c(0, 0.5, 1, 1.5), labels = c("0", "0.5", "1.0", "1.5+"), limits = c(-0.2, 1.5)) +
+  labs(x = 'Shares per pound', y = 'Frequency')
+
+```
+@fig-ca-vs-us-2 compares the frequency of food prices per pound allocated to food banks in Canada and the USA. It shows that most food items are distributed at a low cost, with a high frequency at the lowest price point, presumably representing free or very cheap items. The frequency diminishes as the price per pound increases, indicating that higher-priced items are less common in food banks. Both countries exhibit a similar pattern, with the majority of food aid being in the lower price ranges.
+
+# Discussion
+This study has revealed significant insights into the operational efficiency and pricing strategies of food banks across Canada and the USA. Our findings show that the "Choice system" implemented by Feeding America has led to an equitable distribution of food based on the needs and strategic bidding by food banks. However, disparities in operational efficiency suggest that Canadian food banks are more effective in terms of pounds of food distributed per share. The variation in prices per pound of food, especially for essential items like cereals and diapers, underscores the dynamic nature of demand and supply affecting food banks.
+# Limitations
+
+The study's conclusions are drawn from a dataset that, while extensive, has certain limitations in scope and representation. The data primarily reflects transactions within the "Choice system" employed by Feeding America, potentially omitting smaller or independent food banks. Additionally, the dataset does not fully account for the regional and seasonal variations that may significantly impact the pricing and distribution of food. The absence of a direct analysis of socio-economic factors means that the influence of local policies, donor behaviors, and community support on the operations of food banks is not explicitly measured. These limitations suggest that the findings, while indicative, may not encompass the full spectrum of the food bank ecosystem.
+
+# Trends
+
+The analysis within this paper has uncovered trends in the operational efficiency and pricing strategies across food banks in North America. It was observed that Canadian food banks tend to distribute food more efficiently when measured in pounds per share, indicating a higher operational efficiency than their American counterparts. Moreover, the study revealed a stratified pricing system where essential items such as cereals and diapers command higher prices, pointing towards their higher demand or lower supply. Such trends highlight the variable nature of food bank operations and suggest an adaptive market mechanism at play within the "Choice system" that reflects the nuanced needs of food bank clients.
+
+
+
+
+# Future
+
+Future research should focus on the long-term impact of the "Choice system" on food bank operations, including how changes in economic conditions influence bidding strategies. Additionally, a comparative study involving more regions within each country could offer a broader perspective on regional operational efficiencies. Investigating the sustainability of food banks as they face increasing demands and potential disruptions in the supply chain could also provide valuable insights for policy and operational improvements. Finally, integrating client feedback could refine the understanding of value attributed to different food items and help optimize food distribution further.
 
 
 \newpage
 
 # References
-
-
