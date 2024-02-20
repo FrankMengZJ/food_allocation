@@ -1,25 +1,30 @@
-#### Preamble ####
-# Purpose: Reproduce figure 2
-# Author: Zijun Mneg
-# Date: 12 February 2024
-# Contact: zijun.meng@mai.utoronto.ca
-# License: MIT
-# Pre-requisites: -
 
 library(ggplot2)
 library(dplyr)
+source('prog/theme_tanutama.R')
+df <- read.csv('data/bidding.csv')
+df$unitprice <- df$pricePerPound
+df$unitprice[which(df$unitprice>1.5)] <- 1.5
+df$unitprice[which(df$unitprice< -0.2)] <- (-0.2)
+N <- length(which(!is.na(df$unitprice)))
+yax <- seq(0, 0.35, 0.05)
+figup <- ggplot(df, aes(unitprice)) +
+  geom_histogram( binwidth=0.05, fill = 'grey',
+                  color = 'black', size= 0.35,
+                  alpha = 0.75) +
+  scale_y_continuous(expand = c(0, 0),
+                     breaks = yax*N,
+                     labels = c('0', '0.05',
+                                '0.10', '0.15',
+                                '0.20', '0.25',
+                                '0.30', '0.35')) +
+  coord_cartesian(ylim=c(0,20650)) +
+  xlab('Shares per pound') +
+  scale_x_continuous(breaks = c(0,5,10,15)/10,
+                     labels = c(0,0.5,1.0,'1.5+')) +
+  ylab('Frequency') +
+  theme_tanutama()
+ggsave('figs/pdf/priceperpound.pdf', figup,
+       width = 7, height = 4.5)  
 
-# Load and prepare the data
-df <- read.csv('inputs/data/bidding.csv') %>%
-  mutate(unitprice = pmin(pmax(pricePerPound, -0.2), 1.5)) # Clamp values within [-0.2, 1.5] range directly
 
-# Define the number of non-NA unitprice values for scaling y-axis labels
-N <- sum(!is.na(df$unitprice))
-
-# Create the histogram
-ggplot(df, aes(x = unitprice)) +
-  geom_histogram(binwidth = 0.05, fill = 'grey', color = 'black', size = 0.35, alpha = 0.75) +
-  scale_x_continuous(breaks = c(0, 0.5, 1, 1.5), labels = c("0", "0.5", "1.0", "1.5+"), limits = c(-0.2, 1.5)) +
-  labs(x = 'Shares per pound', y = 'Frequency', title = 'Distribution of Price per Pound')+
-  theme_minimal()
-  

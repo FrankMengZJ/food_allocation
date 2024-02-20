@@ -1,26 +1,19 @@
 #### Preamble ####
-# Purpose: Cleans the raw delay data
-# Author: Zijun Mneg
-# Date: 24 January 2024
-# Contact: zijun.meng@mai.utoronto.ca
+# Purpose: Clean the data
+# Author: Zijun Meng
+# Date: 19 February 2024
+# Contact: zijun.meng@mail.utoronto.ca
 # License: MIT
-# Pre-requisites: -
+# Pre-requisites: Download the data from https://www.journals.uchicago.edu/doi/suppl/10.1086/720332/suppl_file/2017061data.zip
+# unzip the file, put bidding.csv file in the folder "inputs/data" 
 
 #### Workspace setup ####
 library(tidyverse)
 #### Clean data ####
-raw_data <- read_csv("inputs/data/raw_data.csv")
+raw_data <- read_csv("inputs/data/bidding.csv")
 
 
 cleaned_data <-
-  raw_data |>
-  rename(Min_Delay = "Min Delay", Min_Gap = "Min Gap")|>
-  select(Date, Time, Day, Station, Code, Min_Delay, Line) |>
-  filter(Min_Delay > 0) %>% 
-  group_by(Line)
-
-cleaned_data <-
-  cleaned_data[cleaned_data$Line %in% c("BD", "SHP", "SRT", "YU"), ]
-cleaned_data
+  select(raw_data, year,monthyear, COUNTRYCODE, biddate, biddertype, grossweight, totalPounds, month_num, totalShares, pricePerPound, yellowPounds, choicemember, poundsPerShare, type)
 #### Save data ####
-write_csv(cleaned_data, "outputs/data/analysis_data.csv")
+write_csv(cleaned_data, "outputs/data/bidding.csv") 
